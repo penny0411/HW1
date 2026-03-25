@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DHT11 Live Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #1a1a2e; /* Very dark background */
+            --card-bg: #27293d; /* Lighter dark for cards */
+            --text-main: #ffffff;
+            --text-muted: #9a9a9a;
+            --temp-color: #ff8d72; /* Orange-red for temperature */
+            --hum-color: #1d8cf8; /* Light blue for humidity */
+            --font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 30px 40px;
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-sub {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .db-badge {
+            background-color: #f5f6fa;
+            color: #1e1e2f;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .live-badge {
+            background-color: rgba(0, 242, 195, 0.1);
+            color: #00f2c3;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(0, 242, 195, 0.3);
+        }
+
+        .live-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background-color: #00f2c3;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px #00f2c3;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 25px 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-title {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .metric-value {
+            font-size: 36px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .temp-text { color: var(--temp-color); }
+        .hum-text { color: var(--hum-color); }
+        
+        .temp-stat-text { color: #f1c40f; } /* Yellowish for avg/max temp */
+        .hum-stat-text { color: #00d2d3; } /* Cyan for avg/max hum */
+
+        .metric-sub {
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        .chart-row {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-title {
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🌡️ DHT11 Live Monitor</h1>
+        <div class="header-sub">
+            Real-time temperature & humidity &mdash; 
+            <span class="db-badge">aiotdb.db</span>
+            <span class="db-badge">sensors</span>
+        </div>
+        <div class="live-badge">LIVE</div>
+    </div>
+
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-title">📉 TEMPERATURE</div>
+            <div class="metric-value temp-text" id="val-temp">--.- °C</div>
+            <div class="metric-sub" id="sub-temp">Prev: --.- °C</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-title">💧 HUMIDITY</div>
+            <div class="metric-value hum-text" id="val-hum">--.- %</div>
+            <div class="metric-sub" id="sub-hum">Prev: --.- %</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-title">📊 TEMP AVG / MAX</div>
+            <div class="metric-value temp-stat-text" id="val-temp-stat">--.-° / --.-°</div>
+            <div class="metric-sub">Last 60 readings</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-title">📊 HUM AVG / MAX</div>
+            <div class="metric-value hum-stat-text" id="val-hum-stat">--.-% / --.-%</div>
+            <div class="metric-sub">Last 60 readings</div>
+        </div>
+    </div>
+
+    <div class="chart-row">
+        <div class="chart-title">📉 Temperature (°C)</div>
+        <div class="chart-container">
+            <canvas id="tempChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="chart-row" style="margin-bottom: 0;">
+        <div class="chart-title">💧 Humidity (%RH)</div>
+        <div class="chart-container">
+            <canvas id="humChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        Chart.defaults.color = '#9a9a9a';
+        Chart.defaults.font.family = "'Poppins', 'Segoe UI', Tahoma, Geneva, sans-serif";
+
+        // Global Chart options
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 0 }, // Instant updates
+            interaction: {
+                intersect: false,
+                mode: 'index',
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1e1e2f',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: '#2b3553',
+                    borderWidth: 1
+                }
+            },
+            scales: {
+                x: {
+                    display: false, // hide x-axis text
+                    grid: { display: false }
+                },
+                y: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)',
+                        drawBorder: false
+                    },
+                    border: { display: false }
+                }
+            },
+            elements: {
+                point: { radius: 2, backgroundColor: '#fff', borderWidth: 1, hitRadius: 10, hoverRadius: 4 },
+                line: { tension: 0 } // Straight lines without curve
+            }
+        };
+
+        // Init Temperature Chart
+        const ctxTemp = document.getElementById('tempChart').getContext('2d');
+        const gradientTemp = ctxTemp.createLinearGradient(0, 0, 0, 250);
+        gradientTemp.addColorStop(0, 'rgba(255, 141, 114, 0.4)');
+        gradientTemp.addColorStop(1, 'rgba(255, 141, 114, 0.0)');
+
+        const tempChart = new Chart(ctxTemp, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    borderColor: '#ff8d72',
+                    backgroundColor: gradientTemp,
+                    borderWidth: 2,
+                    fill: true,
+                    stepped: false
+                }]
+            },
+            options: {
+                ...commonOptions,
+                scales: {
+                    ...commonOptions.scales,
+                    y: {
+                        ...commonOptions.scales.y,
+                        min: 0,
+                        max: 50,
+                        ticks: { stepSize: 10, callback: value => value + ' °C' }
+                    }
+                }
+            }
+        });
+
+        // Init Humidity Chart
+        const ctxHum = document.getElementById('humChart').getContext('2d');
+        const gradientHum = ctxHum.createLinearGradient(0, 0, 0, 250);
+        gradientHum.addColorStop(0, 'rgba(29, 140, 248, 0.4)');
+        gradientHum.addColorStop(1, 'rgba(29, 140, 248, 0.0)');
+
+        const humChart = new Chart(ctxHum, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    borderColor: '#1d8cf8',
+                    backgroundColor: gradientHum,
+                    borderWidth: 2,
+                    fill: true,
+                    stepped: false
+                }]
+            },
+            options: {
+                ...commonOptions,
+                scales: {
+                    ...commonOptions.scales,
+                    y: {
+                        ...commonOptions.scales.y,
+                        min: 0,
+                        max: 100,
+                        ticks: { stepSize: 20, callback: value => value + ' %' }
+                    }
+                }
+            }
+        });
+
+        async function fetchAndUpdateData() {
+            try {
+                const response = await fetch('/api/data_latest');
+                const data = await response.json();
+
+                if (data.length > 0) {
+                    const labels = data.map(d => d.timestamp);
+                    const temps = data.map(d => d.temperature);
+                    const hums = data.map(d => d.humidity);
+
+                    const currentTemp = temps[temps.length - 1];
+                    const currentHum = hums[hums.length - 1];
+                    
+                    const pTemp = temps.length > 1 ? temps[temps.length - 2] : null;
+                    const pHum = hums.length > 1 ? hums[hums.length - 2] : null;
+
+                    const avgTemp = (temps.reduce((a,b) => a+b, 0) / temps.length).toFixed(1);
+                    const maxTemp = Math.max(...temps).toFixed(1);
+                    const avgHum = (hums.reduce((a,b) => a+b, 0) / hums.length).toFixed(1);
+                    const maxHum = Math.max(...hums).toFixed(1);
+
+                    document.getElementById('val-temp').innerText = `${currentTemp.toFixed(1)}°C`;
+                    if (pTemp !== null) document.getElementById('sub-temp').innerText = `Prev: ${pTemp.toFixed(1)} °C`;
+
+                    document.getElementById('val-hum').innerText = `${currentHum.toFixed(1)}%`;
+                    if (pHum !== null) document.getElementById('sub-hum').innerText = `Prev: ${pHum.toFixed(1)} %`;
+
+                    document.getElementById('val-temp-stat').innerText = `${avgTemp}° / ${maxTemp}°`;
+                    document.getElementById('val-hum-stat').innerText = `${avgHum}% / ${maxHum}%`;
+
+                    tempChart.data.labels = labels;
+                    tempChart.data.datasets[0].data = temps;
+                    tempChart.update();
+
+                    humChart.data.labels = labels;
+                    humChart.data.datasets[0].data = hums;
+                    humChart.update();
+                }
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        fetchAndUpdateData();
+        setInterval(fetchAndUpdateData, 2000);
+    </script>
+</body>
+</html>

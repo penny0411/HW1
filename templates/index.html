@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIoT Sensor Data Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background-color: #f4f4f9;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            display: inline-block;
+        }
+        h1 {
+            color: #333;
+        }
+        .data {
+            font-size: 24px;
+            margin: 20px 0;
+            color: #555;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.stop {
+            background-color: #dc3545;
+        }
+        button.stop:hover {
+            background-color: #a71d2a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AIoT Sensor Data Generator</h1>
+        <p>Generates random temperature (15-35°C) and humidity (30-80%) every 2 seconds.</p>
+        <div class="data">
+            <div>Temperature: <span id="temp">--</span> °C</div>
+            <div>Humidity: <span id="hum">--</span> %</div>
+        </div>
+        <button id="toggleBtn" onclick="toggleGeneration()">Start Data Generation</button>
+        <p id="status" style="color: green; margin-top: 15px;"></p>
+    </div>
+
+    <script>
+        let intervalId = null;
+
+        function generateData() {
+            // Random Temperature 15 to 35
+            const temperature = (Math.random() * 20 + 15).toFixed(2);
+            // Random Humidity 30 to 80
+            const humidity = (Math.random() * 50 + 30).toFixed(2);
+
+            document.getElementById('temp').innerText = temperature;
+            document.getElementById('hum').innerText = humidity;
+
+            // Send to backend
+            fetch('/api/data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    temperature: parseFloat(temperature),
+                    humidity: parseFloat(humidity)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const status = document.getElementById('status');
+                status.innerText = "Data sent to database at " + new Date().toLocaleTimeString();
+                setTimeout(() => { status.innerText = ""; }, 1500);
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function toggleGeneration() {
+            const btn = document.getElementById('toggleBtn');
+            if (intervalId) {
+                // Stop it
+                clearInterval(intervalId);
+                intervalId = null;
+                btn.innerText = "Start Data Generation";
+                btn.classList.remove('stop');
+                document.getElementById('status').innerText = "Generation stopped.";
+            } else {
+                // Start it
+                generateData(); // run once immediately
+                intervalId = setInterval(generateData, 2000);
+                btn.innerText = "Stop Data Generation";
+                btn.classList.add('stop');
+            }
+        }
+    </script>
+</body>
+</html>
