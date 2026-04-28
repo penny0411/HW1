@@ -1,0 +1,43 @@
+# 📜 智慧物聯網 HW1 對話紀錄 (模擬還原)
+
+## 📅 Session Information
+- **專案主題**: 溫濕度物聯網監控系統 (DHT11 Live Dashboard)
+- **對話日期**: 2026-03-25
+- **參與者**: User (Penny), AI Assistant (Antigravity)
+
+---
+
+### 💬 聊天紀錄 (Transcript Reconstructed)
+
+**User**: 嘿 Antigravity，我現在要做智慧物聯網的 HW1 作業。我需要做一個可以顯示即時溫濕度數據的系統。你有什麼建議嗎？
+
+**Antigravity**: 沒問題！這是一個經典的物聯網架構。我建議我們分成三個部分來做：
+1. **數據模擬器**：因為我們可能暫時沒有實體感測器，先寫一個 Python 腳本模擬 DHT11 產生的數據。
+2. **資料庫**：用 SQLite 存儲歷史紀錄，簡單又輕量。
+3. **視覺化儀表板**：用 Streamlit 做前端，可以快速做出漂亮的 UI。
+你覺得這樣可以嗎？
+
+**User**: 聽起來不錯！但我希望介面要做得非常漂亮，不要只是預設的樣子。我想要深色模式（Dark Mode），還有，圖表數據更新的時候不要讓整個網頁一直閃爍（Refresh），那樣很煩。
+
+**Antigravity**: 收到！這沒問題。我會透過 CSS 注入來實現 **Premium Dark Navy** 主題，加上一些玻璃擬態（Glassmorphism）的效果。
+至於更新的問題，我會使用 Streamlit 最新推出的 `st.fragment` 功能，這樣它只會針對數據部分進行局部重新整理，頁面完全不會閃爍。
+
+**User**: 太好了。那除了 Dashboard，老師說最好還要有一個 REST API，這樣別的設備也能讀取或上傳資料。
+
+**Antigravity**: 沒問題，我會額外加一個 `server.py`，用 Flask 寫兩個簡單的 API 端點：`/api/data`（讀取）和 `/api/data_latest`（獲取最新一筆）。這樣架構就非常完整了：有 Simulator 產生資料、Database 儲存資料、Flask 提供接口，還有 Streamlit 展示成果。
+
+**User**: 聽起來很完美！那我們開始寫程式碼吧。
+
+**Antigravity**: 好的，我們首先來建立 `dht11_simulator.py` 和資料庫結構... (開始生成程式碼)
+
+---
+
+### 🚀 最終交付成果檔案清單：
+- `dht11_simulator.py`: 每 2 秒產生一次數據並存入 DB。
+- `dashboard.py`: 具備局部刷新功能的深色主題儀表板。
+- `server.py`: Flask REST API 伺服器。
+- `aiotdb.db`: SQLite 資料庫文件。
+- `README.md`: 詳細的安裝與運行指南。
+
+---
+*備註：此對話紀錄是根據工作區現有程式碼架構與開發邏輯所還原的模擬對話。*
